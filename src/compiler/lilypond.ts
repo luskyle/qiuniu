@@ -10,7 +10,8 @@ export interface CompiledScore {
 
 export async function compileScore(
   sourcePath: string,
-  executable: string
+  executable: string,
+  workingDirectory = path.dirname(sourcePath)
 ): Promise<CompiledScore> {
   const outputDirectory = await mkdtemp(path.join(os.tmpdir(), "lilypond-preview-"));
   const outputPrefix = path.join(outputDirectory, "score");
@@ -21,7 +22,7 @@ export async function compileScore(
         executable,
         ["--svg", "--output", outputPrefix, sourcePath],
         {
-          cwd: path.dirname(sourcePath),
+          cwd: workingDirectory,
           windowsHide: true,
           maxBuffer: 10 * 1024 * 1024
         },

@@ -17,7 +17,8 @@
   ],
   "activationEvents": [
     "onLanguage:lilypond",
-    "onCommand:lilypond.openPreview"
+    "onCommand:lilypond.openPreview",
+    "onCommand:lilypond.openVisualEditor"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -25,6 +26,10 @@
       {
         "command": "lilypond.openPreview",
         "title": "LilyPond: Open Score Preview"
+      },
+      {
+        "command": "lilypond.openVisualEditor",
+        "title": "LilyPond: New Visual Score"
       }
     ],
     "configuration": {
@@ -32,8 +37,8 @@
       "properties": {
         "lilypond.executable": {
           "type": "string",
-          "default": "lilypond",
-          "description": "Path to the LilyPond executable used to compile score previews."
+          "default": "",
+          "description": "Optional path to a LilyPond executable. Leave empty to use the bundled standalone runtime."
         }
       }
     },
@@ -62,6 +67,8 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "check-types": "tsc --noEmit -p ./",
+    "test": "npm run compile && node --test",
+    "prepare:lilypond": "node scripts/prepare-lilypond-runtime.mjs",
     "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {

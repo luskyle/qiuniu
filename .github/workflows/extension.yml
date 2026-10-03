@@ -15,8 +15,8 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Type-check, build, and package
+  verify:
+    name: Type-check and test
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -34,35 +34,84 @@ jobs:
       - name: Check TypeScript
         run: npm run check-types
 
-      - name: Compile extension
-        run: npm run compile
+      - name: Run unit tests
+        run: npm test
 
-      - name: Package VS Code extension
-        run: npx --yes @vscode/vsce package --no-dependencies --out lilypond-score-editor.vsix
+  package:
+    name: Package LilyPond for ${{ matrix.target }}
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            runner: ubuntu-latest
+          - target: win32-x64
+            runner: windows-latest
+          - target: darwin-x64
+            runner: macos-15-intel
+          - target: darwin-arm64
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-      - name: Upload VSIX artifact
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Stage verified LilyPond runtime
+        run: npm run prepare:lilypond -- ${{ matrix.target }}
+
+      - name: Test extension and bundled runtime
+        run: npm test
+
+      - name: Verify standalone runtime resources and engraving
+        run: node scripts/verify-lilypond-runtime.mjs ${{ matrix.target }}
+
+      - name: Package platform-specific VSIX
+        run: npx --yes @vscode/vsce package --no-dependencies --target ${{ matrix.target }} --out lilypond-score-editor-${{ matrix.target }}.vsix
+
+      - name: Verify VSIX contents
+        run: node scripts/verify-vsix.mjs lilypond-score-editor-${{ matrix.target }}.vsix ${{ matrix.target }}
+
+      - name: Upload platform VSIX
         uses: actions/upload-artifact@v4
         with:
-          name: lilypond-score-editor
-          path: lilypond-score-editor.vsix
+          name: vsix-${{ matrix.target }}
+          path: lilypond-score-editor-${{ matrix.target }}.vsix
           if-no-files-found: error
           retention-days: 14
 
   release:
-    name: Publish GitHub release
+    name: Publish platform VSIX releases
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: package
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Download VSIX artifact
+      - name: Download platform VSIX artifacts
         uses: actions/download-artifact@v4
         with:
-          name: lilypond-score-editor
+          pattern: vsix-*
           path: release
+          merge-multiple: true
+
+      - name: Download corresponding LilyPond source
+        run: |
+          curl --fail --location --retry 3 \
+            https://gitlab.com/lilypond/lilypond/-/archive/v2.26.0/lilypond-v2.26.0.tar.gz \
+            --output release/lilypond-2.26.0-source.tar.gz
+          echo "4c787c2930afbcb4b4abb90c44f4cfd4fd920743418e0c332d2d250fad9c1e6a  release/lilypond-2.26.0-source.tar.gz" | sha256sum --check
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" release/lilypond-score-editor.vsix --verify-tag --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" release/* --verify-tag --generate-notes

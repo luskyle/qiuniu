@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
-import { compileScore, removeCompiledScore } from "../compiler/lilypond";
+import path from "node:path";
+import { lilyPondEngine, RenderedScore } from "../engine/lilypondEngine";
 
 export class PreviewPanel implements vscode.Disposable {
   private static readonly panels = new Map<string, PreviewPanel>();
 
-  static open(document: vscode.TextDocument): void {
+  static open(document: vscode.TextDocument, extensionPath: string): void {
     const key = document.uri.toString();
     const existing = this.panels.get(key);
     if (existing) {
@@ -13,7 +14,7 @@ export class PreviewPanel implements vscode.Disposable {
       return;
     }
 
-    const instance = new PreviewPanel(document);
+    const instance = new PreviewPanel(document, extensionPath);
     this.panels.set(key, instance);
     instance.panel.reveal(vscode.ViewColumn.Beside);
     void instance.render();
@@ -21,11 +22,14 @@ export class PreviewPanel implements vscode.Disposable {
 
   private readonly panel: vscode.WebviewPanel;
   private readonly disposables: vscode.Disposable[] = [];
-  private outputDirectory?: string;
+  private renderedScore?: RenderedScore;
   private renderVersion = 0;
   private disposed = false;
 
-  private constructor(private readonly document: vscode.TextDocument) {
+  private constructor(
+    private readonly document: vscode.TextDocument,
+    private readonly extensionPath: string
+  ) {
     this.panel = vscode.window.createWebviewPanel(
       "lilypondScorePreview",
       `Score: ${document.uri.fsPath.split(/[\\/]/).pop() ?? "Untitled"}`,
@@ -54,30 +58,35 @@ export class PreviewPanel implements vscode.Disposable {
       "Compiling LilyPond score…"
     );
 
-    let outputDirectory: string | undefined;
+    let renderedScore: RenderedScore | undefined;
     try {
       const executable = vscode.workspace
         .getConfiguration("lilypond")
-        .get<string>("executable", "lilypond");
-      const result = await compileScore(this.document.uri.fsPath, executable);
-      outputDirectory = result.outputDirectory;
+        .get<string>("executable", "");
+      renderedScore = await lilyPondEngine.render(this.document.getText(), {
+        executable,
+        extensionPath: this.extensionPath,
+        baseDirectory: path.dirname(this.document.uri.fsPath)
+      });
 
       if (this.disposed || version !== this.renderVersion) {
-        await removeCompiledScore(outputDirectory);
+        await renderedScore.dispose();
         return;
       }
 
       this.panel.webview.options = {
         enableScripts: false,
-        localResourceRoots: [vscode.Uri.file(outputDirectory)]
+        localResourceRoots: [
+          vscode.Uri.file(path.dirname(renderedScore.pages[0]))
+        ]
       };
-      const previousOutput = this.outputDirectory;
-      this.outputDirectory = outputDirectory;
-      outputDirectory = undefined;
+      const previousOutput = this.renderedScore;
+      this.renderedScore = renderedScore;
+      renderedScore = undefined;
 
-      this.panel.webview.html = this.createScorePage(result.pages);
+      this.panel.webview.html = this.createScorePage(this.renderedScore.pages);
       if (previousOutput) {
-        await removeCompiledScore(previousOutput);
+        await previousOutput.dispose();
       }
     } catch (error) {
       if (!this.disposed && version === this.renderVersion) {
@@ -86,8 +95,8 @@ export class PreviewPanel implements vscode.Disposable {
         this.panel.webview.html = this.createMessagePage(message);
       }
     } finally {
-      if (outputDirectory) {
-        await removeCompiledScore(outputDirectory);
+      if (renderedScore) {
+        await renderedScore.dispose();
       }
     }
   }
@@ -140,11 +149,11 @@ export class PreviewPanel implements vscode.Disposable {
     this.renderVersion++;
     PreviewPanel.panels.delete(this.document.uri.toString());
     this.disposables.forEach((disposable) => disposable.dispose());
-    if (this.outputDirectory) {
-      void removeCompiledScore(this.outputDirectory).catch((error: unknown) => {
+    if (this.renderedScore) {
+      void this.renderedScore.dispose().catch((error: unknown) => {
         console.error("Failed to clean up LilyPond preview output.", error);
       });
-      this.outputDirectory = undefined;
+      this.renderedScore = undefined;
     }
   }
 }

@@ -1,0 +1,17 @@
+LilyPond runtime
+================
+
+This extension distribution includes the official LilyPond 2.26.0 standalone
+runtime for the target platform, Copyright (C) the LilyPond authors.
+
+LilyPond is licensed under the GNU General Public License, version 3 or later.
+The complete license and notices for bundled third-party components are
+included in runtime/lilypond/licenses/. The LilyPond copyright notice is in
+runtime/lilypond/licenses/lilypond-2.26.0.COPYING.
+
+The corresponding LilyPond 2.26.0 source distribution is made available as
+lilypond-2.26.0-source.tar.gz alongside the VSIX files in each GitHub release:
+https://github.com/luskyle/qiuniu/releases
+
+Upstream source and release information:
+https://gitlab.com/lilypond/lilypond/-/releases/v2.26.0

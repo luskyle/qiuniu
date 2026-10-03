@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { PreviewPanel } from "./preview/previewPanel";
+import { VisualScoreEditor } from "./visualEditor/visualScoreEditor";
 
 export function activate(context: vscode.ExtensionContext): void {
   const openPreview = vscode.commands.registerCommand(
@@ -20,11 +21,16 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      PreviewPanel.open(document);
+      PreviewPanel.open(document, context.extensionPath);
     }
   );
 
-  context.subscriptions.push(openPreview);
+  const openVisualEditor = vscode.commands.registerCommand(
+    "lilypond.openVisualEditor",
+    async () => VisualScoreEditor.open(context.extensionUri)
+  );
+
+  context.subscriptions.push(openPreview, openVisualEditor);
 }
 
 export function deactivate(): void {}

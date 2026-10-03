@@ -4,6 +4,9 @@
 3rd/lilypond/**
 node_modules/**
 src/**
+docs/**
+tests/**
+scripts/**
 .gitignore
 .gitmodules
 tsconfig.json
