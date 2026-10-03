@@ -1,7 +1,11 @@
 import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { compileScore, removeCompiledScore } from "../compiler/lilypond";
+import {
+  compileScore,
+  compileScoreToPdf,
+  removeCompiledScore
+} from "../compiler/lilypond";
 
 export interface RenderOptions {
   executable?: string;
@@ -16,9 +20,36 @@ export interface RenderedScore {
 
 export interface LilyPondEngine {
   render(source: string, options?: RenderOptions): Promise<RenderedScore>;
+  exportPdf(
+    source: string,
+    outputPath: string,
+    options?: RenderOptions
+  ): Promise<void>;
 }
 
 export class CommandLineLilyPondEngine implements LilyPondEngine {
+  async exportPdf(
+    source: string,
+    outputPath: string,
+    options: RenderOptions = {}
+  ): Promise<void> {
+    const inputDirectory = await mkdtemp(
+      path.join(os.tmpdir(), "lilypond-pdf-source-")
+    );
+    const sourcePath = path.join(inputDirectory, "score.ly");
+    try {
+      await writeFile(sourcePath, source, "utf8");
+      await compileScoreToPdf(
+        sourcePath,
+        await resolveLilyPondExecutable(options.extensionPath, options.executable),
+        outputPath,
+        options.baseDirectory ?? inputDirectory
+      );
+    } finally {
+      await rm(inputDirectory, { recursive: true, force: true });
+    }
+  }
+
   async render(
     source: string,
     options: RenderOptions = {}

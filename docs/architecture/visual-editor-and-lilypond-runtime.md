@@ -72,7 +72,7 @@ interface LilyPondEngine {
 
 ### 当前实现状态与边界
 
-阶段 1 已实现单高音谱表的 HTML5 DOM/CSS 交互编辑器、`.music` 模型文件、自定义编辑器、可替换的 `LilyPondEngine` 和 CLI 适配器。编辑器支持休止符、升降记号、附点时值、常见调号/拍号，并按可用宽度自动换行。可视化编辑器不内嵌 LilyPond 生成的 SVG；用户可从画布请求独立雕版预览。尚未实现导入任意 `.ly` 或原生共享库。各平台 LilyPond standalone runtime 已打入对应的 VSIX。
+阶段 1 已实现单高音谱表的 HTML5 DOM/CSS 交互编辑器、`.music` 模型文件、自定义编辑器、可替换的 `LilyPondEngine` 和 CLI 适配器。编辑器支持乐谱标题、音符、休止符、静音空白符（LilyPond skip）、升降记号、附点时值、常见调号/拍号、40–240 BPM 速度设置，并将长乐谱自动排版到连续 A4 页面；每行保持相同的小节数量，小节内事件等距排列。页面会补足空白谱行以铺满纸面，且空白乐谱也保留可点击的谱表。标题保存在 `.music` 文件中，LilyPond 雕版和 PDF 导出会显示标题。一个 `.music` 文件可包含多页。画布支持钢琴音色试听与多页 PDF 导出，PDF 由 LilyPond 直接生成。可视化编辑器不以内嵌 SVG 作为交互编辑面。尚未实现导入任意 `.ly` 或原生共享库。各平台 LilyPond standalone runtime 已打入对应的 VSIX。
 
 平台交付现使用官方 LilyPond 2.26.0 standalone release archives：Linux x64 40.6 MB、Windows x64 43.4 MB、macOS x64 39.6 MB、macOS arm64 38.9 MB（压缩下载体积）。解包后的 Linux runtime 约 134 MB，包含 `bin/`、`lib/`、`libexec/`、`share/`、字体与所有依赖许可证；`ldd` 未发现缺失依赖，独立运行 `--version` 和真实 SVG 雕版成功。Linux 仍需操作系统的 glibc（检查出的最低符号版本为 GLIBC_2.28）和 ELF loader；“独立”表示不需要另装 LilyPond/Guile/字体包，并非替换操作系统基础 ABI。官方下载 URL 和 SHA-256 在 `scripts/prepare-lilypond-runtime.mjs` 固定校验。CI 将每个平台的完整 runtime 放进相应 target VSIX，不再将 Linux 资源混入 Windows/macOS 包。VSIX 内包含官方提供的组件 license notices；tag release 同时附上精确匹配的 LilyPond 2.26.0 官方源码归档，用于 GPL 源码可获取性，不依赖或检出 Git 源码仓库。
 

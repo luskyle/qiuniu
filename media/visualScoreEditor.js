@@ -4,20 +4,23 @@
   const status = document.getElementById("status");
   const deleteButton = document.getElementById("remove-note");
   const previewButton = document.getElementById("preview-score");
+  const exportPdfButton = document.getElementById("export-pdf");
   const playButton = document.getElementById("play-score");
+  const playIcon = document.getElementById("play-icon");
   const noteTool = document.getElementById("note-tool");
   const restTool = document.getElementById("rest-tool");
+  const spacerTool = document.getElementById("spacer-tool");
   const dottedTool = document.getElementById("dotted-tool");
   const accidentalTool = document.getElementById("accidental-tool");
   const timeSignatureTool = document.getElementById("time-signature");
   const keySignatureTool = document.getElementById("key-signature");
+  const tempoTool = document.getElementById("tempo");
   const durationButtons = [...document.querySelectorAll(".duration")];
-  const staffStep = 12.5;
-  const staffLeft = 70;
-  const staffRight = 16;
-  const minimumMeasureWidth = 150;
+  const staffStep = 10;
+  const staffLeft = 58;
+  const staffRight = 13;
+  const minimumMeasureWidth = 145;
   const pageSystemsHeight = 970;
-  const tempo = 100;
   const restSymbols = { 1: "𝄻", 2: "𝄼", 4: "𝄽", 8: "𝄾", 16: "𝄿" };
   let selectedDuration = 4;
   let selectedNoteId;
@@ -31,9 +34,14 @@
   let playbackContext;
   let playbackOscillators = [];
   let playbackTimer;
+  let playbackAnimationFrame;
+  let playbackTimeline = [];
+  let activePlaybackEventId;
   let loaded = false;
   let score = {
     schemaVersion: 1,
+    title: "",
+    tempo: 100,
     timeSignature: "4/4",
     keySignature: "C major",
     notes: []
@@ -52,7 +60,7 @@
   function getPitchRange(measures) {
     const pitches = measures
       .flatMap((measure) => measure.events)
-      .filter((event) => event.type !== "rest")
+      .filter((event) => !event.type || event.type === "note")
       .map((event) => event.diatonicStep);
     return pitches.length
       ? { lowest: Math.min(...pitches), highest: Math.max(...pitches) }
@@ -61,10 +69,10 @@
 
   function getSystemGeometry(measures) {
     const { lowest, highest } = getPitchRange(measures);
-    const upperOffset = Math.max(122, highest * staffStep + 40);
-    const lowerOffset = Math.max(0, -lowest * staffStep + 27);
-    const height = Math.max(224, 12 + upperOffset + lowerOffset + 12);
-    return { staffBottom: 12 + upperOffset, height };
+    const upperOffset = Math.max(98, highest * staffStep + 32);
+    const lowerOffset = Math.max(0, -lowest * staffStep + 22);
+    const height = Math.max(180, 10 + upperOffset + lowerOffset + 10);
+    return { staffBottom: 10 + upperOffset, height };
   }
 
   function keyAlterations() {
@@ -117,7 +125,7 @@
         startTime + 0.009
       );
       const decayEnd =
-        startTime + Math.max(0.12, Math.min(2.4, duration * (1.35 / harmonic ** 0.42)));
+        startTime + Math.max(0.08, Math.min(2.4, duration * (0.92 / harmonic ** 0.42)));
       envelope.gain.exponentialRampToValueAtTime(0.0001, decayEnd);
       oscillator.connect(envelope);
       envelope.connect(context.destination);
@@ -136,7 +144,11 @@
 
   function stopPlayback(message = "") {
     window.clearTimeout(playbackTimer);
+    window.cancelAnimationFrame(playbackAnimationFrame);
     playbackTimer = undefined;
+    playbackAnimationFrame = undefined;
+    playbackTimeline = [];
+    setActivePlaybackEvent(undefined);
     const context = playbackContext;
     playbackContext = undefined;
     playbackOscillators.forEach((oscillator) => oscillator.stop());
@@ -146,11 +158,65 @@
         status.textContent = `关闭音频设备失败：${error.message}`;
       });
     }
-    playButton.textContent = "▶ 播放";
+    playIcon.textContent = "▶";
+    playButton.setAttribute("aria-label", "播放当前乐谱");
+    playButton.title = "播放当前乐谱";
     playButton.setAttribute("aria-pressed", "false");
     if (message) {
       status.textContent = message;
     }
+  }
+
+  function setActivePlaybackEvent(id) {
+    if (activePlaybackEventId === id) {
+      return;
+    }
+    activePlaybackEventId = id;
+    scoreSheet.querySelectorAll(".score-item.playing").forEach((item) => {
+      item.classList.remove("playing");
+    });
+    if (!id) {
+      return;
+    }
+    const item = scoreSheet.querySelector(
+      `[data-note-id="${CSS.escape(id)}"]`
+    );
+    if (!item) {
+      return;
+    }
+    item.classList.add("playing");
+    const bounds = item.getBoundingClientRect();
+    if (bounds.top < 0 || bounds.bottom > window.innerHeight) {
+      item.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }
+
+  function updatePlaybackProgress() {
+    const context = playbackContext;
+    if (!context || playbackTimeline.length === 0) {
+      return;
+    }
+    const now = context.currentTime;
+    const currentIndex = playbackTimeline.findIndex(
+      (event) => now >= event.start && now < event.end
+    );
+    if (currentIndex >= 0) {
+      const current = playbackTimeline[currentIndex];
+      setActivePlaybackEvent(current.id);
+      const percent = Math.min(
+        100,
+        Math.floor(((now - current.start) / (current.end - current.start)) * 100)
+      );
+      status.textContent = `正在播放 · 第 ${current.index + 1}/${playbackTimeline.length} 个音符/休止符/空白符 · ${percent}% · ${score.tempo} BPM`;
+    } else if (now >= playbackTimeline[playbackTimeline.length - 1].end) {
+      setActivePlaybackEvent(undefined);
+      status.textContent = "乐谱播放完毕，钢琴音色尾音仍在延续…";
+    } else {
+      status.textContent = "乐谱即将开始…";
+    }
+    playbackAnimationFrame = window.requestAnimationFrame(
+      updatePlaybackProgress
+    );
   }
 
   async function startPlayback() {
@@ -167,33 +233,45 @@
     try {
       const context = new AudioContextConstructor();
       playbackContext = context;
-      playButton.textContent = "… 启动中";
+      playIcon.textContent = "…";
+      playButton.setAttribute("aria-label", "正在启动播放");
       playButton.setAttribute("aria-pressed", "true");
       await context.resume();
       if (playbackContext !== context) {
         return;
       }
       let cursor = context.currentTime + 0.06;
+      const timeline = [];
+      let eventIndex = 0;
       for (const measure of groupMeasures()) {
         const measureAccidentals = new Map();
         for (const event of measure.events) {
-          const duration = (eventTicks(event) / 4) * (60 / tempo);
-          if (event.type !== "rest") {
+          const duration = (eventTicks(event) / 4) * (60 / score.tempo);
+          const start = cursor;
+          const end = start + duration;
+          if (!event.type || event.type === "note") {
             playPianoNote(
               getMidiPitch(event, measureAccidentals),
-              cursor,
+              start,
               duration
             );
           }
+          timeline.push({ id: event.id, index: eventIndex, start, end });
+          eventIndex += 1;
           cursor += duration;
         }
       }
-      playButton.textContent = "■ 停止";
+      playbackTimeline = timeline;
+      playbackAnimationFrame = window.requestAnimationFrame(
+        updatePlaybackProgress
+      );
+      playIcon.textContent = "■";
+      playButton.setAttribute("aria-label", "停止播放");
+      playButton.title = "停止播放";
       playButton.setAttribute("aria-pressed", "true");
-      status.textContent = `正在以钢琴音色播放 · ${tempo} BPM`;
       playbackTimer = window.setTimeout(
         () => stopPlayback("播放完成"),
-        (cursor - context.currentTime + 1.2) * 1000
+        (cursor - context.currentTime + 2.5) * 1000
       );
     } catch (error) {
       stopPlayback();
@@ -212,7 +290,13 @@
     selectedDuration = selected.duration;
     selectedDotted = Boolean(selected.dotted);
     selectedAccidental = selected.accidental;
-    setSelectedTool(selected.type === "rest" ? "rest" : "note");
+    setSelectedTool(
+      selected.type === "rest"
+        ? "rest"
+        : selected.type === "spacer"
+          ? "spacer"
+          : "note"
+    );
     durationButtons.forEach((button) => {
       button.setAttribute(
         "aria-pressed",
@@ -264,9 +348,12 @@
 
   function makeScoreItem(event, index) {
     const isRest = event.type === "rest";
+    const isSpacer = event.type === "spacer";
     const button = document.createElement("button");
     button.type = "button";
     button.className = `score-item${isRest ? " rest" : ""}${
+      isSpacer ? " spacer" : ""
+    }${
       event.id === selectedNoteId ? " selected" : ""
     }`;
     button.dataset.noteId = event.id;
@@ -277,7 +364,17 @@
     }
     button.setAttribute("aria-pressed", String(event.id === selectedNoteId));
 
-    if (isRest) {
+    if (isSpacer) {
+      button.setAttribute(
+        "aria-label",
+        `空白符，时值 1/${event.duration}${event.dotted ? " 附点" : ""}`
+      );
+      const marker = document.createElement("span");
+      marker.className = "spacer-mark";
+      marker.textContent = "·";
+      marker.setAttribute("aria-hidden", "true");
+      button.append(marker);
+    } else if (isRest) {
       button.setAttribute(
         "aria-label",
         `休止符，时值 1/${event.duration}${event.dotted ? " 附点" : ""}`
@@ -328,7 +425,7 @@
         const line = document.createElement("span");
         line.className = "ledger-line";
         line.style.top = `${
-          (event.diatonicStep + ledgerStep) * staffStep + 7
+          (event.diatonicStep + ledgerStep) * staffStep + 6
         }px`;
         button.append(line);
       }
@@ -340,7 +437,7 @@
         const line = document.createElement("span");
         line.className = "ledger-line";
         line.style.top = `${
-          (event.diatonicStep - 10 - ledgerStep) * staffStep + 7
+          (event.diatonicStep - 10 - ledgerStep) * staffStep + 6
         }px`;
         button.append(line);
       }
@@ -383,7 +480,7 @@
 
     const lines = document.createElement("div");
     lines.className = "staff-lines";
-    lines.style.top = `${staffBottom - 100}px`;
+    lines.style.top = `${staffBottom - 80}px`;
     lines.setAttribute("aria-hidden", "true");
     system.append(lines);
 
@@ -396,38 +493,34 @@
 
     const staffWidth = Math.max(200, availableWidth - staffLeft - staffRight);
     const widthPerMeasure = staffWidth / measures.length;
-    const capacity = getMeasureCapacity();
     let localStart = firstEventIndex;
 
     measures.forEach((measure, measureIndex) => {
       if (measureIndex > 0) {
         const barline = document.createElement("span");
         barline.className = "barline";
-        barline.style.top = `${staffBottom - 100}px`;
-        barline.style.height = "101px";
+        barline.style.top = `${staffBottom - 80}px`;
+        barline.style.height = "81px";
         barline.style.left = `${staffLeft + widthPerMeasure * measureIndex}px`;
         barline.setAttribute("aria-hidden", "true");
         system.append(barline);
       }
 
-      let elapsed = 0;
       measure.events.forEach((event, eventIndex) => {
-        const ticks = eventTicks(event);
         const noteCenter =
           staffLeft +
           widthPerMeasure * measureIndex +
-          widthPerMeasure * ((elapsed + ticks / 2) / capacity);
+          widthPerMeasure * ((eventIndex + 0.5) / measure.events.length);
         const element = makeScoreItem(event, localStart + eventIndex);
-        element.style.left = `${noteCenter - 15}px`;
+        element.style.left = `${noteCenter - 13}px`;
         element.style.top = `${
-          event.type === "rest"
-          ? Number(system.dataset.staffBottom) - 58
+          event.type === "rest" || event.type === "spacer"
+          ? Number(system.dataset.staffBottom) - 47
           : Number(system.dataset.staffBottom) -
             event.diatonicStep * staffStep -
-            9
+            8
         }px`;
         system.append(element);
-        elapsed += ticks;
       });
       localStart += measure.events.length;
     });
@@ -438,6 +531,7 @@
     scoreSheet.replaceChildren();
     timeSignatureTool.value = score.timeSignature;
     keySignatureTool.value = score.keySignature;
+    tempoTool.value = String(score.tempo);
     const selected = score.notes.find((event) => event.id === selectedNoteId);
     accidentalTool.value = String(
       selected?.accidental ?? selectedAccidental ?? "none"
@@ -448,6 +542,26 @@
     const page = document.createElement("div");
     page.className = "score-page";
     scoreSheet.append(page);
+    const pageTitle = document.createElement("input");
+    pageTitle.className = "score-title";
+    pageTitle.type = "text";
+    pageTitle.maxLength = 200;
+    pageTitle.value = score.title;
+    pageTitle.placeholder = "点击输入乐谱标题";
+    pageTitle.setAttribute("aria-label", "乐谱标题");
+    pageTitle.addEventListener("input", () => {
+      score.title = pageTitle.value;
+    });
+    pageTitle.addEventListener("change", () => {
+      score.title = pageTitle.value;
+      announceChange();
+    });
+    pageTitle.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        pageTitle.blur();
+      }
+    });
+    page.append(pageTitle);
     const systemsContainer = document.createElement("div");
     systemsContainer.className = "page-systems";
     page.append(systemsContainer);
@@ -462,40 +576,83 @@
     const systems = [];
     for (let start = 0; start < measures.length; start += measuresPerSystem) {
       const systemMeasures = measures.slice(start, start + measuresPerSystem);
+      while (systemMeasures.length < measuresPerSystem) {
+        systemMeasures.push({ events: [], startIndex: score.notes.length });
+      }
       systems.push({
         start,
         measures: systemMeasures,
         geometry: getSystemGeometry(systemMeasures)
       });
     }
-    let currentPageHeight = 0;
-    systems.forEach((systemData, index) => {
-      const nextHeight =
-        systemData.geometry.height + (currentPageHeight > 0 ? 8 : 0);
-      if (currentPageHeight + nextHeight > pageSystemsHeight && index > 0) {
+    const pages = [{ page, systemsContainer, systems: [], height: 0 }];
+    systems.forEach((systemData) => {
+      let currentPage = pages[pages.length - 1];
+      let nextHeight =
+        systemData.geometry.height + (currentPage.systems.length > 0 ? 8 : 0);
+      if (
+        currentPage.height + nextHeight > pageSystemsHeight &&
+        currentPage.systems.length > 0
+      ) {
         const nextPage = document.createElement("div");
         nextPage.className = "score-page";
         const nextSystems = document.createElement("div");
         nextSystems.className = "page-systems";
         nextPage.append(nextSystems);
         scoreSheet.append(nextPage);
-        currentPageHeight = 0;
+        currentPage = {
+          page: nextPage,
+          systemsContainer: nextSystems,
+          systems: [],
+          height: 0
+        };
+        pages.push(currentPage);
+        nextHeight = systemData.geometry.height;
       }
-      const targetPage = scoreSheet.lastElementChild;
-      const targetSystems = targetPage.querySelector(".page-systems");
-      const showSignature = currentPageHeight === 0;
-      const firstEventIndex = systemData.measures[0]?.startIndex ?? 0;
-      const system = renderSystem(
-        systemData.measures,
-        firstEventIndex,
-        systemData.start,
-        index,
-        showSignature,
-        targetSystems.clientWidth
-      );
-      targetSystems.append(system);
-      currentPageHeight +=
-        systemData.geometry.height + (currentPageHeight > 0 ? 8 : 0);
+      currentPage.systems.push(systemData);
+      currentPage.height += nextHeight;
+    });
+
+    const blankMeasure = { events: [], startIndex: score.notes.length };
+    const blankGeometry = getSystemGeometry([blankMeasure]);
+    let nextFillerMeasureStart = systems.length * measuresPerSystem;
+    pages.forEach((currentPage, pageIndex) => {
+      while (
+        currentPage.height +
+          blankGeometry.height +
+          (currentPage.systems.length > 0 ? 8 : 0) <=
+        pageSystemsHeight
+      ) {
+        currentPage.systems.push({
+          start: nextFillerMeasureStart,
+          measures: Array.from({ length: measuresPerSystem }, () => ({
+            ...blankMeasure
+          })),
+          geometry: blankGeometry,
+          editable: pageIndex === pages.length - 1
+        });
+        nextFillerMeasureStart += measuresPerSystem;
+        currentPage.height +=
+          blankGeometry.height + (currentPage.systems.length > 1 ? 8 : 0);
+      }
+    });
+
+    pages.forEach((currentPage) => {
+      currentPage.systems.forEach((systemData, index) => {
+        const firstEventIndex = systemData.measures[0]?.startIndex ?? 0;
+        const system = renderSystem(
+          systemData.measures,
+          firstEventIndex,
+          systemData.start,
+          index,
+          index === 0,
+          currentPage.systemsContainer.clientWidth
+        );
+        if (systemData.editable === false) {
+          system.dataset.editable = "false";
+        }
+        currentPage.systemsContainer.append(system);
+      });
     });
 
     scoreSheet.querySelectorAll(".score-page").forEach((scorePage, index) => {
@@ -512,24 +669,21 @@
     }
 
     const measureCount = measures.length;
+    const pageCount = scoreSheet.querySelectorAll(".score-page").length;
     const restCount = score.notes.filter((event) => event.type === "rest").length;
-    const noteCount = score.notes.length - restCount;
+    const spacerCount = score.notes.filter((event) => event.type === "spacer").length;
+    const noteCount = score.notes.length - restCount - spacerCount;
     deleteButton.disabled = !selectedNoteId;
     playButton.disabled = !loaded || score.notes.length === 0;
     status.textContent = !loaded
       ? "正在载入乐谱…"
-      : `${noteCount} 个音符 · ${restCount} 个休止符 · ${measureCount} 小节`;
+      : `${noteCount} 个音符 · ${restCount} 个休止符 · ${spacerCount} 个空白符 · ${measureCount} 小节 · ${pageCount} 页`;
   }
 
   function addEvent(clientX, clientY, system) {
     const systemBounds = system.getBoundingClientRect();
-    const measures = groupMeasures();
     const systemMeasures = Number(system.dataset.measureCount);
     const measureStart = Number(system.dataset.measureStart);
-    const systemMeasureGroups = measures.slice(
-      measureStart,
-      measureStart + systemMeasures
-    );
     const availableWidth = Math.max(200, system.clientWidth - staffLeft - staffRight);
     const widthPerMeasure = availableWidth / systemMeasures;
     const localX = clientX - systemBounds.left - staffLeft;
@@ -537,9 +691,35 @@
       0,
       Math.min(systemMeasures - 1, Math.floor(localX / widthPerMeasure))
     );
-    const measure = systemMeasureGroups[measureIndex];
-    if (!measure) {
-      return;
+    const targetMeasureIndex = measureStart + measureIndex;
+    let measures = groupMeasures();
+    const originalMeasureCount = measures.length;
+    while (measures.length <= targetMeasureIndex) {
+      const lastMeasure = measures[measures.length - 1];
+      const elapsed = lastMeasure.events.reduce(
+        (ticks, event) => ticks + eventTicks(event),
+        0
+      );
+      const ticksToAdd =
+        elapsed < getMeasureCapacity()
+          ? getMeasureCapacity() - elapsed
+          : Math.min(16, getMeasureCapacity());
+      appendSpacerEvents(ticksToAdd);
+      measures = groupMeasures();
+    }
+    let measure = measures[targetMeasureIndex];
+    if (targetMeasureIndex >= originalMeasureCount) {
+      const placeholderIds = new Set(
+        measure.events
+          .filter((event) => event.type === "spacer")
+          .map((event) => event.id)
+      );
+      score.notes = score.notes.filter((event) => !placeholderIds.has(event.id));
+      measures = groupMeasures();
+      measure = measures[targetMeasureIndex] ?? {
+        events: [],
+        startIndex: score.notes.length
+      };
     }
     const withinMeasure =
       (localX - measureIndex * widthPerMeasure) / widthPerMeasure;
@@ -558,6 +738,13 @@
             duration: selectedDuration,
             ...(selectedDotted ? { dotted: true } : {})
           }
+        : selectedTool === "spacer"
+          ? {
+              id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+              type: "spacer",
+              duration: selectedDuration,
+              ...(selectedDotted ? { dotted: true } : {})
+            }
         : {
             id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
             diatonicStep: staffPosition(
@@ -571,17 +758,42 @@
               : { accidental: selectedAccidental }),
             ...(selectedDotted ? { dotted: true } : {})
           };
-    const insertAt = measure.startIndex + localIndex;
+    const insertAt = Math.min(
+      score.notes.length,
+      measure.startIndex + localIndex
+    );
     score.notes.splice(insertAt, 0, event);
     selectedNoteId = event.id;
     render();
     announceChange();
   }
 
+  function appendSpacerEvents(ticks) {
+    const durationTicks = [
+      [16, 1],
+      [8, 2],
+      [4, 4],
+      [2, 8],
+      [1, 16]
+    ];
+    let remaining = ticks;
+    for (const [value, duration] of durationTicks) {
+      while (remaining >= value) {
+        score.notes.push({
+          id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+          type: "spacer",
+          duration
+        });
+        remaining -= value;
+      }
+    }
+  }
+
   function setSelectedTool(tool) {
     selectedTool = tool;
     noteTool.setAttribute("aria-pressed", String(tool === "note"));
     restTool.setAttribute("aria-pressed", String(tool === "rest"));
+    spacerTool.setAttribute("aria-pressed", String(tool === "spacer"));
   }
 
   durationButtons.forEach((button) => {
@@ -595,6 +807,7 @@
 
   noteTool.addEventListener("click", () => setSelectedTool("note"));
   restTool.addEventListener("click", () => setSelectedTool("rest"));
+  spacerTool.addEventListener("click", () => setSelectedTool("spacer"));
 
   dottedTool.addEventListener("click", () => {
     selectedDotted = !selectedDotted;
@@ -615,7 +828,11 @@
     selectedAccidental =
       accidentalTool.value === "none" ? undefined : Number(accidentalTool.value);
     const selected = score.notes.find((event) => event.id === selectedNoteId);
-    if (!selected || selected.type === "rest") {
+    if (
+      !selected ||
+      selected.type === "rest" ||
+      selected.type === "spacer"
+    ) {
       return;
     }
     if (selectedAccidental === undefined) {
@@ -635,6 +852,22 @@
 
   keySignatureTool.addEventListener("change", () => {
     score.keySignature = keySignatureTool.value;
+    render();
+    announceChange();
+  });
+
+  tempoTool.addEventListener("change", () => {
+    const tempo = Number(tempoTool.value);
+    if (!Number.isInteger(tempo) || tempo < 40 || tempo > 240) {
+      status.textContent = "速度必须是 40–240 BPM 之间的整数。";
+      tempoTool.value = String(score.tempo);
+      return;
+    }
+    const wasPlaying = Boolean(playbackContext);
+    if (wasPlaying) {
+      stopPlayback("速度已更改，请重新播放");
+    }
+    score.tempo = tempo;
     render();
     announceChange();
   });
@@ -660,6 +893,7 @@
       target instanceof Element ? target.closest(".staff-system") : null;
     if (
       system &&
+      system.dataset.editable !== "false" &&
       event.clientY - system.getBoundingClientRect().top >=
         Number(system.dataset.staffBottom) - 124 &&
       event.clientY - system.getBoundingClientRect().top <=
@@ -674,7 +908,7 @@
       return;
     }
     const note = score.notes.find((item) => item.id === draggingNoteId);
-    if (note && note.type !== "rest") {
+    if (note && (!note.type || note.type === "note")) {
       note.diatonicStep = staffPosition(
         event.clientY,
         { top: draggingStaffTop },
@@ -685,7 +919,7 @@
       );
       if (element) {
         element.style.top = `${
-          draggingStaffBottom - note.diatonicStep * staffStep - 9
+          draggingStaffBottom - note.diatonicStep * staffStep - 8
         }px`;
       }
     }
@@ -725,6 +959,14 @@
     }
   });
 
+  exportPdfButton.addEventListener("click", () => {
+    if (loaded) {
+      window.clearTimeout(previewTimer);
+      vscode.postMessage({ type: "scoreChanged", score });
+      vscode.postMessage({ type: "exportPdfRequested" });
+    }
+  });
+
   playButton.addEventListener("click", () => {
     if (playbackContext) {
       stopPlayback();
@@ -751,7 +993,7 @@
       (event.key === "ArrowUp" || event.key === "ArrowDown")
     ) {
       const note = score.notes.find((item) => item.id === selectedNoteId);
-      if (note && note.type !== "rest") {
+      if (note && (!note.type || note.type === "note")) {
         note.diatonicStep = Math.max(
           -9,
           Math.min(14, note.diatonicStep + (event.key === "ArrowUp" ? 1 : -1))

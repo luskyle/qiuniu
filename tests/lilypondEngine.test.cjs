@@ -54,3 +54,37 @@ test(
     );
   }
 );
+
+test(
+  "exports a multipage PDF from in-memory LilyPond source",
+  { skip: process.platform === "win32" },
+  async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "lilypond-pdf-test-"));
+    const executable = path.join(directory, "fake-lilypond");
+    const outputPath = path.join(directory, "score.pdf");
+    await writeFile(
+      executable,
+      [
+        "#!/bin/sh",
+        "set -eu",
+        "test \"$1\" = \"--pdf\"",
+        "test \"$2\" = \"--output\"",
+        "grep -q 'generated-pdf-score' \"$4\"",
+        "printf '%%PDF-1.7\\n/Pages 3\\n' > \"$3.pdf\""
+      ].join("\n")
+    );
+    await chmod(executable, 0o755);
+    try {
+      await new CommandLineLilyPondEngine().exportPdf(
+        '\\markup "generated-pdf-score"',
+        outputPath,
+        { executable }
+      );
+      const pdf = await readFile(outputPath, "utf8");
+      assert.match(pdf, /^%PDF-1\.7/);
+      assert.match(pdf, /\/Pages 3/);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }
+);

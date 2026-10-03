@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -73,4 +73,59 @@ export async function removeCompiledScore(
   outputDirectory: string
 ): Promise<void> {
   await rm(outputDirectory, { recursive: true, force: true });
+}
+
+export async function compileScoreToPdf(
+  sourcePath: string,
+  executable: string,
+  outputPath: string,
+  workingDirectory = path.dirname(sourcePath)
+): Promise<void> {
+  const outputDirectory = await mkdtemp(path.join(os.tmpdir(), "qiuniu-pdf-"));
+  const outputPrefix = path.join(outputDirectory, "score");
+  const generatedPdf = `${outputPrefix}.pdf`;
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      execFile(
+        executable,
+        ["--pdf", "--output", outputPrefix, sourcePath],
+        {
+          cwd: workingDirectory,
+          windowsHide: true,
+          maxBuffer: 10 * 1024 * 1024
+        },
+        (error, _stdout, stderr) => {
+          if (error) {
+            if ("code" in error && error.code === "ENOENT") {
+              reject(
+                new Error(
+                  `Could not find LilyPond executable "${executable}". Set lilypond.executable to its path.`
+                )
+              );
+              return;
+            }
+            const details = stderr.trim();
+            reject(
+              new Error(
+                details
+                  ? `LilyPond PDF export failed:\n${details}`
+                  : `LilyPond PDF export failed: ${error.message}`
+              )
+            );
+            return;
+          }
+          resolve();
+        }
+      );
+    });
+
+    const generatedFile = await stat(generatedPdf);
+    if (!generatedFile.isFile() || generatedFile.size === 0) {
+      throw new Error("LilyPond finished without producing a PDF document.");
+    }
+    await copyFile(generatedPdf, outputPath);
+  } finally {
+    await rm(outputDirectory, { recursive: true, force: true });
+  }
 }

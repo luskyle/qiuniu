@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import path from "node:path";
 import {
   createEmptyScore,
   parseScore,
@@ -7,10 +8,16 @@ import {
 } from "../score/score";
 import { PreviewPanel } from "../preview/previewPanel";
 import { createEditorHtml } from "./visualScoreEditor";
+import { getAvailableScoreFileName } from "./scoreFiles";
+import { lilyPondEngine } from "../engine/lilypondEngine";
 
 interface ScoreChangedMessage {
   type: "scoreChanged";
   score: unknown;
+}
+
+interface ExportPdfRequestedMessage {
+  type: "exportPdfRequested";
 }
 
 export class MusicEditorProvider implements vscode.CustomTextEditorProvider {
@@ -31,8 +38,15 @@ export class MusicEditorProvider implements vscode.CustomTextEditorProvider {
 
   static async createNew(): Promise<void> {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    const defaultFileName = workspaceFolder
+      ? getAvailableScoreFileName(
+          (await vscode.workspace.fs.readDirectory(workspaceFolder.uri)).map(
+            ([name]) => name
+          )
+        )
+      : "Untitled.music";
     const defaultUri = workspaceFolder
-      ? vscode.Uri.joinPath(workspaceFolder.uri, "Untitled.music")
+      ? vscode.Uri.joinPath(workspaceFolder.uri, defaultFileName)
       : undefined;
     const selectedUri = await vscode.window.showSaveDialog({
       defaultUri,
@@ -48,6 +62,20 @@ export class MusicEditorProvider implements vscode.CustomTextEditorProvider {
       ? selectedUri
       : selectedUri.with({ path: `${selectedUri.path}.music` });
     try {
+      try {
+        await vscode.workspace.fs.stat(uri);
+        await vscode.window.showErrorMessage(
+          `“${uri.fsPath}” 已存在；为避免覆盖现有乐谱，请选择另一个文件名。`
+        );
+        return;
+      } catch (error) {
+        if (
+          !(error instanceof vscode.FileSystemError) ||
+          error.code !== "FileNotFound"
+        ) {
+          throw error;
+        }
+      }
       await vscode.workspace.fs.writeFile(
         uri,
         new TextEncoder().encode(serializeScoreFile(createEmptyScore()))
@@ -113,6 +141,10 @@ export class MusicEditorProvider implements vscode.CustomTextEditorProvider {
         }
         return;
       }
+      if (isExportPdfRequestedMessage(message)) {
+        void updateQueue.then(() => this.exportPdf(document));
+        return;
+      }
       if (!isScoreChangedMessage(message)) {
         return;
       }
@@ -168,6 +200,42 @@ export class MusicEditorProvider implements vscode.CustomTextEditorProvider {
     });
     panel.onDidDispose(() => documentChange.dispose());
   }
+
+  private async exportPdf(document: vscode.TextDocument): Promise<void> {
+    const selectedUri = await vscode.window.showSaveDialog({
+      defaultUri: document.uri.with({
+        path: document.uri.path.replace(/\.music$/i, ".pdf")
+      }),
+      filters: { "PDF document": ["pdf"] },
+      saveLabel: "导出 PDF",
+      title: "将乐谱导出为 PDF"
+    });
+    if (!selectedUri) {
+      return;
+    }
+    const outputUri = selectedUri.path.toLowerCase().endsWith(".pdf")
+      ? selectedUri
+      : selectedUri.with({ path: `${selectedUri.path}.pdf` });
+
+    try {
+      const source = serializeScore(parseScore(document.getText()));
+      const executable = vscode.workspace
+        .getConfiguration("lilypond")
+        .get<string>("executable", "");
+      await lilyPondEngine.exportPdf(source, outputUri.fsPath, {
+        executable,
+        extensionPath: this.extensionUri.fsPath,
+        baseDirectory: path.dirname(document.uri.fsPath)
+      });
+      await vscode.window.showInformationMessage(
+        `乐谱 PDF 已导出：${outputUri.fsPath}`
+      );
+    } catch (error) {
+      await vscode.window.showErrorMessage(
+        error instanceof Error ? error.message : "导出 PDF 失败。"
+      );
+    }
+  }
 }
 
 function isReadyMessage(message: unknown): message is { type: "ready" } {
@@ -184,6 +252,12 @@ function isPreviewRequestedMessage(
   message: unknown
 ): message is { type: "previewRequested" } {
   return isRecord(message) && message.type === "previewRequested";
+}
+
+function isExportPdfRequestedMessage(
+  message: unknown
+): message is { type: "exportPdfRequested" } {
+  return isRecord(message) && message.type === "exportPdfRequested";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

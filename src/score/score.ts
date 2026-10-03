@@ -25,10 +25,19 @@ export interface ScoreRest {
   dotted?: boolean;
 }
 
-export type ScoreEvent = ScoreNote | ScoreRest;
+export interface ScoreSpacer {
+  id: string;
+  type: "spacer";
+  duration: NoteDuration;
+  dotted?: boolean;
+}
+
+export type ScoreEvent = ScoreNote | ScoreRest | ScoreSpacer;
 
 export interface ScoreModel {
   schemaVersion: 1;
+  title: string;
+  tempo: number;
   timeSignature: TimeSignature;
   keySignature: KeySignature;
   notes: ScoreEvent[];
@@ -64,6 +73,8 @@ const pitchNames: Readonly<Record<number, string>> = {
 export function createEmptyScore(): ScoreModel {
   return {
     schemaVersion: 1,
+    title: "",
+    tempo: 100,
     timeSignature: "4/4",
     keySignature: "C major",
     notes: []
@@ -84,6 +95,27 @@ export function parseScore(source: string): ScoreModel {
   }
   if (!Array.isArray(value.notes)) {
     throw new Error("Invalid .music file: notes must be an array.");
+  }
+  const tempo =
+    value.tempo === undefined
+      ? 100
+      : typeof value.tempo === "number" &&
+          Number.isInteger(value.tempo) &&
+          value.tempo >= 40 &&
+          value.tempo <= 240
+        ? value.tempo
+        : undefined;
+  if (tempo === undefined) {
+    throw new Error("Invalid .music file: tempo must be an integer from 40 to 240 BPM.");
+  }
+  const title =
+    value.title === undefined
+      ? ""
+      : typeof value.title === "string" && value.title.length <= 200
+        ? value.title
+        : undefined;
+  if (title === undefined) {
+    throw new Error("Invalid .music file: title must be a string of at most 200 characters.");
   }
   const timeSignature = isTimeSignature(value.timeSignature)
     ? value.timeSignature
@@ -117,7 +149,12 @@ export function parseScore(source: string): ScoreModel {
     }
     ids.add(note.id);
 
-    if (note.type !== undefined && note.type !== "note" && note.type !== "rest") {
+    if (
+      note.type !== undefined &&
+      note.type !== "note" &&
+      note.type !== "rest" &&
+      note.type !== "spacer"
+    ) {
       throw new Error(
         `Invalid .music file: event ${index + 1} has an unsupported type.`
       );
@@ -140,6 +177,14 @@ export function parseScore(source: string): ScoreModel {
       return {
         id: note.id,
         type: "rest",
+        duration: note.duration,
+        ...(note.dotted ? { dotted: true } : {})
+      };
+    }
+    if (note.type === "spacer") {
+      return {
+        id: note.id,
+        type: "spacer",
         duration: note.duration,
         ...(note.dotted ? { dotted: true } : {})
       };
@@ -175,7 +220,7 @@ export function parseScore(source: string): ScoreModel {
     };
   });
 
-  return { schemaVersion: 1, timeSignature, keySignature, notes };
+  return { schemaVersion: 1, title, tempo, timeSignature, keySignature, notes };
 }
 
 export function serializeScoreFile(score: ScoreModel): string {
@@ -189,40 +234,76 @@ export function serializeScore(score: ScoreModel): string {
 
   const timeSignature = score.timeSignature ?? "4/4";
   const keySignature = score.keySignature ?? "C major";
+  const title = score.title ?? "";
+  const tempo = score.tempo ?? 100;
   if (!isTimeSignature(timeSignature) || !isKeySignature(keySignature)) {
     throw new Error("Unsupported score key or time signature.");
   }
+  if (typeof title !== "string" || title.length > 200) {
+    throw new Error("Unsupported score title: expected a string of at most 200 characters.");
+  }
+  if (!Number.isInteger(tempo) || tempo < 40 || tempo > 240) {
+    throw new Error("Unsupported score tempo: expected an integer from 40 to 240 BPM.");
+  }
   const measureTicks = getMeasureTicks(timeSignature);
+  const measuresPerPdfPage = 16;
   let elapsedTicks = 0;
+  let measuresOnPdfPage = 0;
   const musicTokens: string[] = [];
+  const addBarline = () => {
+    musicTokens.push("|");
+    measuresOnPdfPage += 1;
+    if (measuresOnPdfPage === measuresPerPdfPage) {
+      musicTokens.push("\\pageBreak");
+      measuresOnPdfPage = 0;
+    }
+  };
   score.notes.forEach((event, index) => {
     const eventTicks = getEventTicks(event);
     if (elapsedTicks > 0 && elapsedTicks + eventTicks > measureTicks) {
-      musicTokens.push("|");
+      addBarline();
       elapsedTicks = 0;
     }
     musicTokens.push(serializeEvent(event));
     elapsedTicks += eventTicks;
     if (elapsedTicks >= measureTicks && index < score.notes.length - 1) {
-      musicTokens.push("|");
+      addBarline();
       elapsedTicks = 0;
     }
   });
   const music = musicTokens.join(" ");
   const [numerator, denominator] = timeSignature.split("/");
+  const titleHeader = title.trim()
+    ? [
+        "\\header {",
+        `  title = "${escapeLilyPondString(title.trim())}"`,
+        "}",
+        ""
+      ]
+    : [];
 
   return [
     '\\version "2.26.0"',
     "",
+    ...titleHeader,
     "\\score {",
     "  \\new Staff {",
     `    \\key ${keyNames[keySignature]} \\${keySignature.includes("minor") ? "minor" : "major"}`,
     `    \\time ${numerator}/${denominator}`,
+    `    \\tempo 4 = ${tempo}`,
     `    ${music}`,
     "  }",
     "  \\layout { }",
     "}"
   ].join("\n");
+}
+
+function escapeLilyPondString(value: string): string {
+  return value
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -244,8 +325,11 @@ function serializeEvent(event: ScoreEvent): string {
     throw new Error(`Unsupported note duration: ${event.duration}`);
   }
   const duration = `${event.duration}${event.dotted ? "." : ""}`;
-  if ("type" in event) {
+  if ("type" in event && event.type === "rest") {
     return `r${duration}`;
+  }
+  if ("type" in event && event.type === "spacer") {
+    return `s${duration}`;
   }
   if (
     event.accidental !== undefined &&

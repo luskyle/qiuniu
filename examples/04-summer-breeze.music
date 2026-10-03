@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "title": "夏日风铃",
+  "tempo": 160,
+  "timeSignature": "4/4",
+  "keySignature": "G major",
+  "notes": [
+    {
+      "id": "sb-01",
+      "diatonicStep": 0,
+      "duration": 2
+    },
+    {
+      "id": "sb-02",
+      "diatonicStep": 2,
+      "duration": 2
+    },
+    {
+      "id": "sb-03",
+      "diatonicStep": 3,
+      "duration": 2
+    },
+    {
+      "id": "sb-04",
+      "diatonicStep": 2,
+      "duration": 2
+    },
+    {
+      "id": "sb-05",
+      "diatonicStep": 0,
+      "duration": 2
+    },
+    {
+      "id": "sb-06",
+      "diatonicStep": -1,
+      "duration": 2
+    },
+    {
+      "id": "sb-07",
+      "diatonicStep": -2,
+      "duration": 2
+    },
+    {
+      "id": "sb-08",
+      "diatonicStep": 0,
+      "duration": 2
+    },
+    {
+      "id": "sb-09",
+      "diatonicStep": 2,
+      "duration": 2
+    },
+    {
+      "id": "sb-10",
+      "diatonicStep": 3,
+      "duration": 2
+    },
+    {
+      "id": "sb-11",
+      "diatonicStep": 5,
+      "duration": 2
+    },
+    {
+      "id": "sb-12",
+      "diatonicStep": 3,
+      "duration": 2
+    },
+    {
+      "id": "sb-13",
+      "diatonicStep": 2,
+      "duration": 2
+    },
+    {
+      "id": "sb-14",
+      "diatonicStep": 0,
+      "duration": 2
+    },
+    {
+      "id": "sb-15",
+      "diatonicStep": -1,
+      "duration": 2
+    },
+    {
+      "id": "sb-16",
+      "diatonicStep": -2,
+      "duration": 2
+    },
+    {
+      "id": "sb-17",
+      "diatonicStep": 0,
+      "duration": 2
+    },
+    {
+      "id": "sb-18",
+      "diatonicStep": 2,
+      "duration": 2
+    },
+    {
+      "id": "sb-19",
+      "diatonicStep": 3,
+      "duration": 2
+    },
+    {
+      "id": "sb-20",
+      "diatonicStep": 5,
+      "duration": 2
+    },
+    {
+      "id": "sb-21",
+      "diatonicStep": 4,
+      "duration": 2
+    },
+    {
+      "id": "sb-22",
+      "diatonicStep": 3,
+      "duration": 2
+    },
+    {
+      "id": "sb-23",
+      "diatonicStep": 2,
+      "duration": 2
+    },
+    {
+      "id": "sb-24",
+      "diatonicStep": 0,
+      "duration": 2
+    },
+    {
+      "id": "sb-25",
+      "diatonicStep": -1,
+      "duration": 2
+    },
+    {
+      "id": "sb-26",
+      "diatonicStep": 0,
+      "duration": 2
+    },
+    {
+      "id": "sb-27",
+      "diatonicStep": 2,
+      "duration": 2
+    },
+    {
+      "id": "sb-28",
+      "diatonicStep": -1,
+      "duration": 2
+    },
+    {
+      "id": "sb-29",
+      "diatonicStep": 0,
+      "duration": 2
+    },
+    {
+      "id": "sb-30",
+      "diatonicStep": -2,
+      "duration": 2
+    },
+    {
+      "id": "sb-31",
+      "diatonicStep": -2,
+      "duration": 1
+    }
+  ]
+}

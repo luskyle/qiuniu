@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Qiuniu Score Editor 是一款面向 VS Code 的交互式五线谱编辑器。"
+    >
+    <meta name="theme-color" content="#f8f6f0">
+    <title>Qiuniu Score Editor — 让记谱回归音乐</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Noto Sans SC", "Microsoft YaHei", sans-serif;
+        color: #192a3a;
+        background: #f8f6f0;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        width: min(100% - 40px, 1080px);
+        margin: 0 auto;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 82px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 750;
+        letter-spacing: -0.03em;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border-radius: 13px;
+        color: #fff;
+        background: #376c75;
+        font-size: 22px;
+      }
+
+      nav {
+        display: flex;
+        gap: 22px;
+        color: #52616b;
+        font-size: 14px;
+      }
+
+      nav a {
+        text-decoration: none;
+      }
+
+      .hero {
+        position: relative;
+        display: grid;
+        min-height: 510px;
+        align-items: center;
+        overflow: hidden;
+        padding: 76px 0 100px;
+      }
+
+      .hero::after {
+        position: absolute;
+        z-index: -1;
+        top: 40px;
+        right: -90px;
+        width: 460px;
+        height: 370px;
+        border-radius: 48% 52% 60% 40%;
+        background: #e7e9d9;
+        content: "";
+        transform: rotate(-9deg);
+      }
+
+      .hero-copy {
+        max-width: 620px;
+      }
+
+      .eyebrow {
+        color: #376c75;
+        font-size: 13px;
+        font-weight: 750;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 20px 0;
+        font-family: Georgia, "Noto Serif SC", serif;
+        font-size: clamp(42px, 7vw, 76px);
+        font-weight: 600;
+        letter-spacing: -0.055em;
+        line-height: 1.13;
+      }
+
+      .intro {
+        max-width: 560px;
+        color: #52616b;
+        font-size: 18px;
+        line-height: 1.8;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 30px;
+      }
+
+      .button {
+        display: inline-flex;
+        min-height: 46px;
+        align-items: center;
+        justify-content: center;
+        padding: 0 19px;
+        border: 1px solid #376c75;
+        border-radius: 8px;
+        color: #fff;
+        background: #376c75;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .button.secondary {
+        color: #376c75;
+        background: transparent;
+      }
+
+      .score-art {
+        position: absolute;
+        top: 134px;
+        right: 17px;
+        width: 390px;
+        padding: 36px 28px;
+        border: 1px solid #deddd4;
+        border-radius: 10px;
+        background: #fffefa;
+        box-shadow: 0 28px 70px #263d3b1a;
+        transform: rotate(3deg);
+      }
+
+      .score-art h2 {
+        margin: 0 0 26px;
+        color: #52616b;
+        font-family: Georgia, serif;
+        font-size: 17px;
+        font-weight: 500;
+        text-align: center;
+      }
+
+      .staff {
+        position: relative;
+        height: 94px;
+        background: repeating-linear-gradient(
+          to bottom,
+          #52616b 0 1px,
+          transparent 1px 18px
+        );
+      }
+
+      .notes {
+        position: absolute;
+        top: 17px;
+        left: 46px;
+        color: #376c75;
+        font-family: Georgia, serif;
+        font-size: 28px;
+        letter-spacing: 13px;
+        white-space: nowrap;
+      }
+
+      .features {
+        padding: 45px 0 90px;
+        border-top: 1px solid #e1dfd6;
+      }
+
+      .features h2 {
+        margin: 0 0 28px;
+        font-family: Georgia, "Noto Serif SC", serif;
+        font-size: 32px;
+        font-weight: 600;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+
+      .card {
+        min-height: 170px;
+        padding: 23px;
+        border: 1px solid #e1dfd6;
+        border-radius: 10px;
+        background: #fffefa;
+      }
+
+      .card h3 {
+        margin: 0 0 10px;
+        font-size: 16px;
+      }
+
+      .card p {
+        margin: 0;
+        color: #52616b;
+        font-size: 14px;
+        line-height: 1.75;
+      }
+
+      footer {
+        padding: 22px 0 34px;
+        border-top: 1px solid #e1dfd6;
+        color: #68747b;
+        font-size: 13px;
+      }
+
+      @media (max-width: 760px) {
+        .hero {
+          min-height: 0;
+          padding: 64px 0 70px;
+        }
+
+        .hero::after {
+          top: 240px;
+          right: -260px;
+        }
+
+        .score-art {
+          display: none;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        nav {
+          gap: 13px;
+          font-size: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="page">
+      <a class="brand" href="./" aria-label="Qiuniu Score Editor 首页">
+        <span class="brand-mark" aria-hidden="true">囚</span>
+        <span>Qiuniu Score Editor</span>
+      </a>
+      <nav aria-label="主导航">
+        <a href="#features">功能</a>
+        <a href="https://github.com/luskyle/qiuniu">源码</a>
+        <a href="https://github.com/luskyle/qiuniu/releases/latest">下载</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero page">
+        <div class="hero-copy">
+          <div class="eyebrow">A visual score editor for VS Code</div>
+          <h1>让记谱，<br>回归音乐。</h1>
+          <p class="intro">
+            在五线谱上直接编写旋律。点选音符、拖动音高、即时试听，再导出适合打印的 PDF。
+            不必从复杂的记谱语法开始。
+          </p>
+          <div class="actions">
+            <a class="button" href="https://github.com/luskyle/qiuniu/releases/latest">下载 VS Code 扩展</a>
+            <a class="button secondary" href="https://github.com/luskyle/qiuniu">查看项目源码</a>
+          </div>
+        </div>
+        <div class="score-art" aria-hidden="true">
+          <h2>一段旋律，从这里开始</h2>
+          <div class="staff"><span class="notes">♪ ♫ ♪ ♩ ♫</span></div>
+        </div>
+      </section>
+
+      <section class="features page" id="features">
+        <h2>为创作而设计</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>所见即所得</h3>
+            <p>在 VS Code 中直接编辑五线谱；点选、拖拽和调整音符，无需手写 LilyPond 语法。</p>
+          </article>
+          <article class="card">
+            <h3>边写边听</h3>
+            <p>内置钢琴音色和速度调节，播放时高亮当前音符，方便检查旋律与节奏。</p>
+          </article>
+          <article class="card">
+            <h3>预览与导出</h3>
+            <p>使用 LilyPond 雕版预览，并导出多页 A4 PDF。发布包包含相应平台的运行资源。</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="page">
+      Qiuniu（囚牛）是中国传统传说中喜爱音乐的龙子。© Qiuniu Score Editor
+    </footer>
+  </body>
+</html>

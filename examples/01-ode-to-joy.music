@@ -1,5 +1,7 @@
 {
   "schemaVersion": 1,
+  "title": "欢乐颂",
+  "tempo": 100,
   "timeSignature": "4/4",
   "keySignature": "C major",
   "notes": [

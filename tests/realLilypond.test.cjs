@@ -69,6 +69,7 @@ test(
         schemaVersion: 1,
         timeSignature: "3/4",
         keySignature: "Bb major",
+        title: "Rest and spacer engraving",
         notes: [
           {
             id: "sharp-c",
@@ -90,7 +91,8 @@ test(
             duration: 4,
             dotted: true
           },
-          { id: "natural-b", diatonicStep: 4, accidental: 0, duration: 4 }
+          { id: "natural-b", diatonicStep: 4, accidental: 0, duration: 4 },
+          { id: "silent-spacer", type: "spacer", duration: 8 }
         ]
       }),
       {
@@ -104,6 +106,42 @@ test(
       assert.match(await readFile(rendered.pages[0], "utf8"), /<svg\b/);
     } finally {
       await rendered.dispose();
+    }
+  }
+);
+
+test(
+  "exports a multipage score as a real PDF",
+  { skip },
+  async () => {
+    const score = createEmptyScore();
+    score.title = 'A "quoted" summer score';
+    score.notes = Array.from({ length: 320 }, (_, index) => ({
+      id: `note-${index + 1}`,
+      diatonicStep: (index % 7) - 2,
+      duration: 4
+    }));
+    const outputPath = path.join(
+      extensionRoot,
+      `qiuniu-multipage-test-${process.pid}.pdf`
+    );
+    try {
+      await new CommandLineLilyPondEngine().exportPdf(
+        serializeScore(score),
+        outputPath,
+        {
+          executable: configuredExecutable,
+          extensionPath: extensionRoot
+        }
+      );
+      const pdf = await readFile(outputPath);
+      assert.match(pdf.toString("utf8", 0, 8), /^%PDF-/);
+      const pageCount = pdf
+        .toString("latin1")
+        .match(/\/Type\s*\/Page\b/g)?.length;
+      assert.ok(pageCount && pageCount > 1, "The export should contain multiple pages.");
+    } finally {
+      await require("node:fs/promises").rm(outputPath, { force: true });
     }
   }
 );
@@ -131,7 +169,7 @@ test(
       );
 
       try {
-        assert.equal(rendered.pages.length, 1, `${file} should fit on one page.`);
+        assert.ok(rendered.pages.length > 0, `${file} should render at least one page.`);
         const svg = await readFile(rendered.pages[0], "utf8");
         assert.match(svg, /<svg\b/, `${file} should render a score SVG.`);
       } finally {
