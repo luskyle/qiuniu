@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "timeSignature": "4/4",
+  "keySignature": "C major",
+  "notes": [
+    {
+      "id": "note-1",
+      "diatonicStep": -2,
+      "duration": 4
+    },
+    {
+      "id": "note-2",
+      "diatonicStep": -2,
+      "duration": 4
+    },
+    {
+      "id": "note-3",
+      "diatonicStep": 2,
+      "duration": 4
+    },
+    {
+      "id": "note-4",
+      "diatonicStep": 2,
+      "duration": 4
+    },
+    {
+      "id": "note-5",
+      "diatonicStep": 3,
+      "duration": 4
+    },
+    {
+      "id": "note-6",
+      "diatonicStep": 3,
+      "duration": 4
+    },
+    {
+      "id": "note-7",
+      "diatonicStep": 2,
+      "duration": 2
+    },
+    {
+      "id": "note-8",
+      "diatonicStep": 1,
+      "duration": 4
+    },
+    {
+      "id": "note-9",
+      "diatonicStep": 1,
+      "duration": 4
+    },
+    {
+      "id": "note-10",
+      "diatonicStep": 0,
+      "duration": 4
+    },
+    {
+      "id": "note-11",
+      "diatonicStep": 0,
+      "duration": 4
+    },
+    {
+      "id": "note-12",
+      "diatonicStep": -1,
+      "duration": 4
+    },
+    {
+      "id": "note-13",
+      "diatonicStep": -1,
+      "duration": 4
+    },
+    {
+      "id": "note-14",
+      "diatonicStep": -2,
+      "duration": 2
+    },
+    {
+      "id": "note-15",
+      "diatonicStep": 2,
+      "duration": 4
+    },
+    {
+      "id": "note-16",
+      "diatonicStep": 2,
+      "duration": 4
+    },
+    {
+      "id": "note-17",
+      "diatonicStep": 1,
+      "duration": 4
+    },
+    {
+      "id": "note-18",
+      "diatonicStep": 1,
+      "duration": 4
+    },
+    {
+      "id": "note-19",
+      "diatonicStep": 0,
+      "duration": 4
+    },
+    {
+      "id": "note-20",
+      "diatonicStep": 0,
+      "duration": 4
+    },
+    {
+      "id": "note-21",
+      "diatonicStep": -1,
+      "duration": 2
+    },
+    {
+      "id": "note-22",
+      "diatonicStep": 2,
+      "duration": 4
+    },
+    {
+      "id": "note-23",
+      "diatonicStep": 2,
+      "duration": 4
+    },
+    {
+      "id": "note-24",
+      "diatonicStep": 1,
+      "duration": 4
+    },
+    {
+      "id": "note-25",
+      "diatonicStep": 1,
+      "duration": 4
+    },
+    {
+      "id": "note-26",
+      "diatonicStep": 0,
+      "duration": 4
+    },
+    {
+      "id": "note-27",
+      "diatonicStep": 0,
+      "duration": 4
+    },
+    {
+      "id": "note-28",
+      "diatonicStep": -1,
+      "duration": 2
+    },
+    {
+      "id": "note-29",
+      "diatonicStep": -2,
+      "duration": 4
+    },
+    {
+      "id": "note-30",
+      "diatonicStep": -2,
+      "duration": 4
+    },
+    {
+      "id": "note-31",
+      "diatonicStep": 2,
+      "duration": 4
+    },
+    {
+      "id": "note-32",
+      "diatonicStep": 2,
+      "duration": 4
+    },
+    {
+      "id": "note-33",
+      "diatonicStep": 3,
+      "duration": 4
+    },
+    {
+      "id": "note-34",
+      "diatonicStep": 3,
+      "duration": 4
+    },
+    {
+      "id": "note-35",
+      "diatonicStep": 2,
+      "duration": 2
+    },
+    {
+      "id": "note-36",
+      "diatonicStep": 1,
+      "duration": 4
+    },
+    {
+      "id": "note-37",
+      "diatonicStep": 1,
+      "duration": 4
+    },
+    {
+      "id": "note-38",
+      "diatonicStep": 0,
+      "duration": 4
+    },
+    {
+      "id": "note-39",
+      "diatonicStep": 0,
+      "duration": 4
+    },
+    {
+      "id": "note-40",
+      "diatonicStep": -1,
+      "duration": 4
+    },
+    {
+      "id": "note-41",
+      "diatonicStep": -1,
+      "duration": 4
+    },
+    {
+      "id": "note-42",
+      "diatonicStep": -2,
+      "duration": 2
+    }
+  ]
+}

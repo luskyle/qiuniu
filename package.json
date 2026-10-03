@@ -1,7 +1,7 @@
 {
-  "name": "lilypond-score-editor",
-  "displayName": "LilyPond Score Editor",
-  "description": "Create and preview LilyPond sheet music in Visual Studio Code.",
+  "name": "score-editor",
+  "displayName": "Qiuniu Score Editor",
+  "description": "Create and edit music scores interactively in Visual Studio Code.",
   "version": "0.1.0",
   "publisher": "qiuniu",
   "license": "Apache-2.0",
@@ -18,22 +18,35 @@
   "activationEvents": [
     "onLanguage:lilypond",
     "onCommand:lilypond.openPreview",
-    "onCommand:lilypond.openVisualEditor"
+    "onCommand:lilypond.openVisualEditor",
+    "onCustomEditor:lilypond.musicEditor"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "lilypond.openPreview",
-        "title": "LilyPond: Open Score Preview"
+        "title": "Qiuniu: Preview LilyPond Source"
       },
       {
         "command": "lilypond.openVisualEditor",
-        "title": "LilyPond: New Visual Score"
+        "title": "Qiuniu: New Visual Score"
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "lilypond.musicEditor",
+        "displayName": "Qiuniu Score Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.music"
+          }
+        ],
+        "priority": "default"
       }
     ],
     "configuration": {
-      "title": "LilyPond",
+      "title": "Qiuniu Score Editor",
       "properties": {
         "lilypond.executable": {
           "type": "string",

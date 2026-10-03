@@ -51,7 +51,10 @@ const requiredFiles = [
   "extension/runtime/lilypond/BUNDLE-METADATA.json",
   `extension/runtime/lilypond/bin/${executable}`,
   "extension/runtime/lilypond/licenses/lilypond-2.26.0.COPYING",
-  "extension/media/visualScoreEditor.js"
+  "extension/media/visualScoreEditor.js",
+  "extension/examples/01-ode-to-joy.music",
+  "extension/examples/02-twinkle-twinkle.music",
+  "extension/examples/03-frere-jacques.music"
 ];
 const missing = requiredFiles.filter((file) => !fileNames.has(file));
 if (missing.length > 0) {

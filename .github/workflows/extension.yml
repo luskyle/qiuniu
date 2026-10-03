@@ -76,16 +76,16 @@ jobs:
         run: node scripts/verify-lilypond-runtime.mjs ${{ matrix.target }}
 
       - name: Package platform-specific VSIX
-        run: npx --yes @vscode/vsce package --no-dependencies --target ${{ matrix.target }} --out lilypond-score-editor-${{ matrix.target }}.vsix
+        run: npx --yes @vscode/vsce package --no-dependencies --target ${{ matrix.target }} --out qiuniu-score-editor-${{ matrix.target }}.vsix
 
       - name: Verify VSIX contents
-        run: node scripts/verify-vsix.mjs lilypond-score-editor-${{ matrix.target }}.vsix ${{ matrix.target }}
+        run: node scripts/verify-vsix.mjs qiuniu-score-editor-${{ matrix.target }}.vsix ${{ matrix.target }}
 
       - name: Upload platform VSIX
         uses: actions/upload-artifact@v4
         with:
           name: vsix-${{ matrix.target }}
-          path: lilypond-score-editor-${{ matrix.target }}.vsix
+          path: qiuniu-score-editor-${{ matrix.target }}.vsix
           if-no-files-found: error
           retention-days: 14
 
@@ -104,7 +104,7 @@ jobs:
           path: release
           merge-multiple: true
 
-      - name: Download corresponding LilyPond source
+      - name: Download corresponding LilyPond source for GPL compliance
         run: |
           curl --fail --location --retry 3 \
             https://gitlab.com/lilypond/lilypond/-/archive/v2.26.0/lilypond-v2.26.0.tar.gz \

@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "timeSignature": "4/4",
+  "keySignature": "C major",
+  "notes": [
+    {
+      "id": "note-1",
+      "diatonicStep": 0,
+      "duration": 4
+    },
+    {
+      "id": "note-2",
+      "diatonicStep": 0,
+      "duration": 4
+    },
+    {
+      "id": "note-3",
+      "diatonicStep": 1,
+      "duration": 4
+    },
+    {
+      "id": "note-4",
+      "diatonicStep": 2,
+      "duration": 4
+    },
+    {
+      "id": "note-5",
+      "diatonicStep": 2,
+      "duration": 4
+    },
+    {
+      "id": "note-6",
+      "diatonicStep": 1,
+      "duration": 4
+    },
+    {
+      "id": "note-7",
+      "diatonicStep": 0,
+      "duration": 4
+    },
+    {
+      "id": "note-8",
+      "diatonicStep": -1,
+      "duration": 4
+    },
+    {
+      "id": "note-9",
+      "diatonicStep": -2,
+      "duration": 4
+    },
+    {
+      "id": "note-10",
+      "diatonicStep": -2,
+      "duration": 4
+    },
+    {
+      "id": "note-11",
+      "diatonicStep": -1,
+      "duration": 4
+    },
+    {
+      "id": "note-12",
+      "diatonicStep": 0,
+      "duration": 4
+    },
+    {
+      "id": "note-13",
+      "diatonicStep": 0,
+      "duration": 2
+    },
+    {
+      "id": "note-14",
+      "diatonicStep": -1,
+      "duration": 4
+    },
+    {
+      "id": "note-15",
+      "diatonicStep": -1,
+      "duration": 2
+    }
+  ]
+}

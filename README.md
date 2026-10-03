@@ -1,13 +1,51 @@
-# LilyPond Score Editor
+# Qiuniu Score Editor
 
-A Visual Studio Code extension for interactively editing LilyPond scores.
+**Qiuniu Score Editor** 是一款面向 VS Code 的交互式五线谱编辑器。打开 `.music` 乐谱后，可以直接在 HTML5 画布上点选、拖拽和调整音符；不必先学习或手写乐谱标记语言，也不需要在一张渲染图片上“编辑”乐谱。
 
-## Requirements
+LilyPond 是 Qiuniu Score Editor 在内部使用的记谱语法和雕版引擎：编辑器把乐谱模型转换成 LilyPond 输入，再用它生成高质量的预览。**Qiuniu Score Editor 才是产品；LilyPond 是幕后工具，不是编辑界面。**
 
-- Visual Studio Code 1.85 or later
-- Node.js and npm for extension development
+## 为什么叫 Qiuniu？
 
-## Development
+囚牛（Qiuniu）是中国传统龙生九子的传说形象之一。相传囚牛喜爱音乐，常与琴、弦乐器和乐律联系在一起，也常被描绘在传统乐器的装饰上。
+
+我们以“囚牛”命名这款编辑器，寄托的是一个简单的愿望：让记谱像演奏和欣赏音乐一样自然。你可以专注于旋律、节奏与乐谱本身，把标记语法和繁琐排版交给工具处理。
+
+## 功能特色
+
+- **直接在五线谱上创作**：`.music` 文件默认在可视化编辑器中打开，谱表和音符由 HTML5 元素构成，可以直接交互，不是背景图片或 SVG 编辑器。
+- **点选与拖拽记谱**：选择音符时值后点击谱表添加音符或休止符；也可以拖动来调整音高。
+- **钢琴音色试听**：点击播放按钮即可试听当前旋律；根据音符时值、附点、休止符、调号和临时记号播放，并可随时停止。
+- **常用记谱控制**：支持高音谱表、C3–E6 音域、全音符至十六分音符、休止符、附点、升号/降号/还原号，以及常用调号和拍号。
+- **A4 纸张排版**：谱面按 A4 纵向页面显示；页面内自动排列小节与谱表系统，内容超出时分页，音域变化时也会调整谱表高度。
+- **乐谱即数据**：`.music` 文件保存结构化乐谱模型。交互修改会同步回文件，适合版本管理，也便于后续继续扩展。
+- **所见与雕版兼顾**：画布负责即时交互；需要精细排版预览时，可调用 LilyPond 对当前乐谱进行雕版。编辑过程本身不依赖 LilyPond 图片。
+- **开箱即用的本地运行时**：发布的 VSIX 内含目标平台所需的 LilyPond 运行资源，一般无需另外安装 LilyPond。
+
+## 开始使用
+
+1. 从项目的 GitHub Release 下载与你的系统和处理器架构对应的 VSIX。
+2. 在 VS Code 扩展视图中打开 **…** 菜单，选择 **从 VSIX 安装…**，然后选择下载的安装包。
+3. 打开现有 `.music` 乐谱，或运行命令面板中的 **Qiuniu: New Visual Score** 创建新乐谱。
+4. 选择时值和记谱工具，在五线谱上点选添加音符；拖动已有音符调整音高。
+5. 点击 **预览雕版**，查看 LilyPond 生成的排版预览。
+
+仓库 [`examples/`](./examples/) 中有《欢乐颂》《小星星》和《两只老虎》的示例乐谱。可以直接打开 `.music` 文件体验编辑器。
+
+## 当前支持范围
+
+当前版本面向单行旋律创作，支持一个高音谱表及上述常用音符、休止符和基础调拍号。尚不支持任意 LilyPond `.ly` 源码导入、和弦、多声部、其他谱号或完整的专业制谱功能。
+
+`.music` 是可视化编辑器的源文件格式。已有的 LilyPond `.ly` 文档仍可通过 **Qiuniu: Preview LilyPond Source** 生成预览，但目前不会把任意 `.ly` 语法反向转换成可视化乐谱。
+
+## LilyPond 在项目中的角色
+
+Qiuniu Score Editor 维护自己的结构化乐谱模型和 `.music` 文档格式，并从模型生成 LilyPond 记谱输入。LilyPond 目前通过官方 standalone 运行时以命令行进程的方式执行，负责高质量雕版和预览；它不负责 HTML5 编辑画布的交互绘制。
+
+各平台 VSIX 分别打包对应的 LilyPond 2.26.0 运行时与所需资源。Linux 运行仍依赖宿主系统的 glibc（官方 x64 二进制要求 glibc 2.28 或更新版本）及系统加载器。包内包含许可证和第三方声明；对应的 LilyPond 源码归档会随 GitHub Release 一同提供。项目不把 LilyPond 源码仓库作为子模块，也不依赖它来构建扩展。
+
+## 本地开发
+
+需要 Node.js 22、npm，以及 VS Code 1.85 或更新版本。
 
 ```sh
 npm install
@@ -16,49 +54,20 @@ npm run compile
 npm test
 ```
 
-Replace `linux-x64` with `win32-x64`, `darwin-x64`, or `darwin-arm64` on the corresponding platform. The packaging workflow stages LilyPond 2.26.0 automatically for the target VSIX. Set `lilypond.executable` only to override the bundled executable. The real engraving integration test runs when the bundled runtime has been staged or `LILYPOND_EXECUTABLE` is set; otherwise that test is skipped.
+在对应平台上将 `linux-x64` 替换为 `win32-x64`、`darwin-x64` 或 `darwin-arm64`。不准备本地运行时也可以运行测试；依赖真实 LilyPond 雕版的集成测试会在运行时不可用时跳过。
 
-Open this folder in VS Code and press **F5** to launch an Extension Development Host. Run **LilyPond: New Visual Score** to open an HTML5 interactive treble staff. The staff and notes are native, editable web elements—not a LilyPond-rendered image. Drag a note value onto the staff (or select a value and click), then drag notes vertically to change pitch. Generated LilyPond source is shown in the adjacent text editor as you compose. Save the generated untitled `.ly` file to keep it.
+在 VS Code 中打开仓库并按 **F5** 启动扩展开发宿主。运行 **Qiuniu: New Visual Score** 创建乐谱。也可以用 `npm test` 运行测试；测试包括 Score Model 序列化、乐谱示例校验以及可用时的真实 LilyPond 雕版。
 
-To preview an existing `.ly` file, open it and run **LilyPond: Open Score Preview**. That preview refreshes when the file is saved.
+## CI 与发布
 
-The initial visual editor supports one treble-clef staff, natural notes from C3 to E6, and whole through sixteenth note values. It does not yet import arbitrary LilyPond source, or model rests, meter, accidentals, chords, or multiple voices. LilyPond remains a separate backend for compiling the generated notation to publication-quality output. See [the architecture plan](./docs/architecture/visual-editor-and-lilypond-runtime.md) for the engine API and native runtime roadmap.
+GitHub Actions 会在推送到 `main`、面向 `main` 的 Pull Request 和手动触发时运行类型检查、测试，并为 Linux x64、Windows x64、macOS x64 和 macOS arm64 构建平台专属 VSIX。推送版本标签（例如 `v0.1.0`）会创建 GitHub Release，并附上各平台安装包及对应的 LilyPond 源码归档。
 
-## CI and releases
+## 项目结构
 
-GitHub Actions checks types, compiles, and packages the extension for pushes to `main`, pull requests targeting `main`, and manual runs. The generated VSIX is uploaded as a workflow artifact. Push a version tag such as `v0.1.0` to run the same checks and publish a GitHub Release with the VSIX attached:
-
-```sh
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-## Project structure
-
-- `src/extension.ts` — extension activation and command registration
-- `src/score/` — structured score model and LilyPond source generation
-- `src/engine/` — replaceable LilyPond rendering API
-- `src/compiler/` — CLI adapter and temporary SVG output
-- `src/preview/` — preview webview and its lifecycle
-- `src/visualEditor/` and `media/` — HTML5 interactive score editor and staff renderer
-- `syntaxes/` — initial TextMate grammar for LilyPond
-- `3rd/lilypond/` — upstream LilyPond source submodule
-
-The tagged release contains platform-specific VSIX packages (Linux x64, Windows x64, macOS x64 and arm64). Each VSIX embeds the complete corresponding LilyPond standalone distribution, including its engraving resources, fonts, Guile runtime, bundled libraries and third-party license notices. The matching LilyPond source archive is published alongside the VSIX packages. Each platform package is approximately 40–45 MB compressed. Users do not need to install LilyPond separately; Linux still uses the host OS glibc (the official x64 binary requires glibc 2.28 or newer), as well as the normal system loader.
-
-Prepare the local Linux x64 runtime and run the real engraving test with:
-
-```sh
-npm run prepare:lilypond -- linux-x64
-npm test
-```
-
-The shallow source submodule in `3rd/lilypond` is kept as a development checkout and is not the version bundled with the extension. Initialize it in a fresh checkout with:
-
-```sh
-git submodule update --init --depth 1
-```
-
-## LilyPond source
-
-The upstream source is available at [lilypond/lilypond on GitLab](https://gitlab.com/lilypond/lilypond). Its license and contribution terms are included in `3rd/lilypond`; the extension's root license applies to this extension code.
+- `src/score/` — 结构化乐谱模型与 LilyPond 输入生成
+- `src/visualEditor/`、`media/` — HTML5 交互式谱面编辑器
+- `src/engine/` — 乐谱雕版引擎接口及 LilyPond 适配
+- `src/compiler/` — LilyPond 命令行调用和输出管理
+- `src/preview/` — LilyPond 雕版预览
+- `examples/` — 可直接打开的 `.music` 示例
+- `docs/architecture/` — 编辑器与运行时架构说明

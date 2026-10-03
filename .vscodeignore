@@ -1,7 +1,6 @@
 .vscode/**
 .vscode-test/**
 .github/**
-3rd/lilypond/**
 node_modules/**
 src/**
 docs/**

@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run LilyPond Score Editor",
+      "name": "Run Qiuniu Score Editor",
       "type": "extensionHost",
       "request": "launch",
       "args": [

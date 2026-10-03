@@ -9,8 +9,10 @@ The complete license and notices for bundled third-party components are
 included in runtime/lilypond/licenses/. The LilyPond copyright notice is in
 runtime/lilypond/licenses/lilypond-2.26.0.COPYING.
 
-The corresponding LilyPond 2.26.0 source distribution is made available as
-lilypond-2.26.0-source.tar.gz alongside the VSIX files in each GitHub release:
+The corresponding official LilyPond 2.26.0 source distribution is made
+available as lilypond-2.26.0-source.tar.gz alongside the VSIX files in each
+GitHub release to meet GPL source-availability requirements. It is not used
+to build this extension:
 https://github.com/luskyle/qiuniu/releases
 
 Upstream source and release information:

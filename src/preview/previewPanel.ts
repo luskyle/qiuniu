@@ -14,7 +14,40 @@ export class PreviewPanel implements vscode.Disposable {
       return;
     }
 
-    const instance = new PreviewPanel(document, extensionPath);
+    const instance = new PreviewPanel(
+      key,
+      `Score: ${document.uri.fsPath.split(/[\\/]/).pop() ?? "Untitled"}`,
+      extensionPath,
+      path.dirname(document.uri.fsPath),
+      () => document.getText(),
+      document
+    );
+    this.panels.set(key, instance);
+    instance.panel.reveal(vscode.ViewColumn.Beside);
+    void instance.render();
+  }
+
+  static openGenerated(
+    source: string,
+    documentUri: vscode.Uri,
+    extensionPath: string
+  ): void {
+    const key = documentUri.toString();
+    const existing = this.panels.get(key);
+    if (existing) {
+      existing.setSource(() => source);
+      existing.panel.reveal(vscode.ViewColumn.Beside);
+      void existing.render();
+      return;
+    }
+
+    const instance = new PreviewPanel(
+      key,
+      `Score: ${path.basename(documentUri.fsPath)}`,
+      extensionPath,
+      path.dirname(documentUri.fsPath),
+      () => source
+    );
     this.panels.set(key, instance);
     instance.panel.reveal(vscode.ViewColumn.Beside);
     void instance.render();
@@ -25,14 +58,20 @@ export class PreviewPanel implements vscode.Disposable {
   private renderedScore?: RenderedScore;
   private renderVersion = 0;
   private disposed = false;
+  private sourceProvider: () => string;
 
   private constructor(
-    private readonly document: vscode.TextDocument,
-    private readonly extensionPath: string
+    private readonly key: string,
+    title: string,
+    private readonly extensionPath: string,
+    private readonly baseDirectory: string,
+    sourceProvider: () => string,
+    document?: vscode.TextDocument
   ) {
+    this.sourceProvider = sourceProvider;
     this.panel = vscode.window.createWebviewPanel(
       "lilypondScorePreview",
-      `Score: ${document.uri.fsPath.split(/[\\/]/).pop() ?? "Untitled"}`,
+      title,
       vscode.ViewColumn.Beside,
       {
         enableScripts: false,
@@ -42,14 +81,20 @@ export class PreviewPanel implements vscode.Disposable {
     this.panel.webview.html = this.createMessagePage(
       "Compiling LilyPond score…"
     );
-    this.disposables.push(
-      vscode.workspace.onDidSaveTextDocument((savedDocument) => {
-        if (savedDocument.uri.toString() === this.document.uri.toString()) {
-          void this.render();
-        }
-      }),
-      this.panel.onDidDispose(() => this.dispose())
-    );
+    if (document) {
+      this.disposables.push(
+        vscode.workspace.onDidSaveTextDocument((savedDocument) => {
+          if (savedDocument.uri.toString() === document.uri.toString()) {
+            void this.render();
+          }
+        })
+      );
+    }
+    this.disposables.push(this.panel.onDidDispose(() => this.dispose()));
+  }
+
+  private setSource(sourceProvider: () => string): void {
+    this.sourceProvider = sourceProvider;
   }
 
   private async render(): Promise<void> {
@@ -63,10 +108,10 @@ export class PreviewPanel implements vscode.Disposable {
       const executable = vscode.workspace
         .getConfiguration("lilypond")
         .get<string>("executable", "");
-      renderedScore = await lilyPondEngine.render(this.document.getText(), {
+      renderedScore = await lilyPondEngine.render(this.sourceProvider(), {
         executable,
         extensionPath: this.extensionPath,
-        baseDirectory: path.dirname(this.document.uri.fsPath)
+        baseDirectory: this.baseDirectory
       });
 
       if (this.disposed || version !== this.renderVersion) {
@@ -147,7 +192,7 @@ export class PreviewPanel implements vscode.Disposable {
     }
     this.disposed = true;
     this.renderVersion++;
-    PreviewPanel.panels.delete(this.document.uri.toString());
+    PreviewPanel.panels.delete(this.key);
     this.disposables.forEach((disposable) => disposable.dispose());
     if (this.renderedScore) {
       void this.renderedScore.dispose().catch((error: unknown) => {
