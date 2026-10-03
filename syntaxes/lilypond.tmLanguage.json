@@ -1,0 +1,53 @@
+{
+  "scopeName": "source.lilypond",
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#string"
+    },
+    {
+      "include": "#command"
+    },
+    {
+      "include": "#note"
+    },
+    {
+      "include": "#duration"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "patterns": [
+        {
+          "name": "comment.line.percentage.lilypond",
+          "match": "%.*$"
+        }
+      ]
+    },
+    "string": {
+      "name": "string.quoted.double.lilypond",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.lilypond",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "command": {
+      "name": "keyword.control.lilypond",
+      "match": "\\\\[A-Za-z][A-Za-z-]*"
+    },
+    "note": {
+      "name": "constant.language.note.lilypond",
+      "match": "(?<![A-Za-z])(?:ces|des|ees|fes|ges|aes|bes|c|d|e|f|g|a|b)(?:isis|eses|is|es)?(?=[',!?0-9~.]|\\s|[{}<>])"
+    },
+    "duration": {
+      "name": "constant.numeric.duration.lilypond",
+      "match": "(?<![0-9])[0-9]+(?:\\.*)(?![0-9])"
+    }
+  }
+}

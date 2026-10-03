@@ -1,0 +1,72 @@
+{
+  "name": "lilypond-score-editor",
+  "displayName": "LilyPond Score Editor",
+  "description": "Create and preview LilyPond sheet music in Visual Studio Code.",
+  "version": "0.1.0",
+  "publisher": "qiuniu",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/luskyle/qiuniu.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:lilypond",
+    "onCommand:lilypond.openPreview"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "lilypond.openPreview",
+        "title": "LilyPond: Open Score Preview"
+      }
+    ],
+    "configuration": {
+      "title": "LilyPond",
+      "properties": {
+        "lilypond.executable": {
+          "type": "string",
+          "default": "lilypond",
+          "description": "Path to the LilyPond executable used to compile score previews."
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "lilypond",
+        "aliases": [
+          "LilyPond",
+          "lilypond"
+        ],
+        "extensions": [
+          ".ly"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lilypond",
+        "scopeName": "source.lilypond",
+        "path": "./syntaxes/lilypond.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "check-types": "tsc --noEmit -p ./",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.7.2"
+  }
+}
